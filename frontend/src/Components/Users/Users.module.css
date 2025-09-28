@@ -1,0 +1,540 @@
+/* Users Container */
+.usersContainer {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    color: var(--color-text);
+}
+
+/* Header Section */
+.header {
+    margin-bottom: 2rem;
+}
+
+.title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--color-blue), var(--color-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.1rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Error Message */
+.errorMessage {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #f5c6cb;
+}
+
+/* Loading States */
+.loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 1rem;
+}
+
+.loadingSpinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top: 3px solid var(--color-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Controls Section */
+.controlsSection {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.searchContainer {
+    position: relative;
+    flex: 1;
+    min-width: 300px;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-secondary);
+}
+
+.searchInput {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border-radius: 8px;
+    border: 2px solid var(--color-border);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    outline: none;
+}
+
+.filtersContainer {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filterGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.filterSelect {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.filterSelect:focus {
+    border-color: var(--color-blue);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+/* Results Info */
+.resultsInfo {
+    margin-bottom: 1.5rem;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Users Section */
+.usersSection {
+    background: var(--color-background);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Users Table */
+.usersTable {
+    display: flex;
+    flex-direction: column;
+}
+
+.tableHeader {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-background-alt);
+    border-bottom: 1px solid var(--color-border);
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.userRow {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--color-border-light);
+    align-items: center;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.userRow:hover {
+    background: var(--color-background-alt);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.userRow:last-child {
+    border-bottom: none;
+}
+
+/* User Cell */
+.userCell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.userAvatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-blue), var(--color-green));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.userInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.userName {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.userEmail {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.userUsername {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+    opacity: 0.7;
+}
+
+/* Role Badge */
+.roleBadge {
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+/* Status Indicator */
+.statusCell {
+    display: flex;
+    align-items: center;
+}
+
+.statusIndicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.statusDot.active {
+    background: var(--color-green);
+    animation: pulse 2s infinite;
+}
+
+.statusDot.inactive {
+    background: var(--color-text-secondary);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+.statusText {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    text-transform: capitalize;
+    font-weight: 500;
+}
+
+/* Books Info */
+.booksCell {
+    display: flex;
+    align-items: center;
+}
+
+.booksInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.currentBooks {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.totalBooks {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+/* Date Cell */
+.dateCell {
+    display: flex;
+    align-items: center;
+}
+
+.lastActive {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+/* Actions */
+.actionsCell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.actionButtons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.actionButton {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.actionButton:hover {
+    background: var(--color-blue);
+    color: white;
+    border-color: var(--color-blue);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.actionButton.dangerButton:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+}
+
+/* Empty State */
+.noResults {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: var(--color-text-secondary);
+    text-align: center;
+    background: var(--color-background);
+    border-radius: 12px;
+    border: 2px dashed var(--color-border);
+}
+
+.noResults h3 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--color-text);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.noResults p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+
+    .tableHeader,
+    .userRow {
+        grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    }
+
+    .booksCell {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .usersContainer {
+        padding: 1.5rem;
+    }
+
+    .title {
+        font-size: 2rem;
+    }
+
+    .controlsSection {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .searchContainer {
+        min-width: auto;
+    }
+
+    .filtersContainer {
+        justify-content: space-between;
+    }
+
+    .tableHeader {
+        display: none;
+    }
+
+    .userRow {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: var(--color-background);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid var(--color-border);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .userRow:hover {
+        transform: none;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .userCell {
+        order: 1;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--color-border-light);
+    }
+
+    .roleCell {
+        order: 2;
+        justify-content: flex-start;
+    }
+
+    .statusCell {
+        order: 3;
+        justify-content: flex-start;
+    }
+
+    .dateCell {
+        order: 4;
+        justify-content: flex-start;
+    }
+
+    .booksCell {
+        order: 5;
+        display: flex;
+        justify-content: flex-start;
+    }
+
+    .actionsCell {
+        order: 6;
+        justify-content: flex-start;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--color-border-light);
+    }
+
+    .actionButtons {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .actionButton {
+        flex: 1;
+        margin: 0 0.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .usersContainer {
+        padding: 1rem;
+    }
+
+    .title {
+        font-size: 1.75rem;
+    }
+
+    .userRow {
+        padding: 1.25rem;
+    }
+
+    .userAvatar {
+        width: 40px;
+        height: 40px;
+    }
+
+    .actionButtons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .actionButton {
+        margin: 0;
+    }
+}
