@@ -23,6 +23,12 @@ class ApiService {
     return response.json();
   }
 
+  // Get current user from token
+  getCurrentUser() {
+    const userData = localStorage.getItem('userData');
+    return userData ? JSON.parse(userData) : null;
+  }
+
   // Auth endpoints
   async login(username, password) {
     const response = await fetch(`${this.baseURL}/auth/login`, {
@@ -40,9 +46,10 @@ class ApiService {
 
     const result = await response.json();
 
-    // Store token in localStorage
+    // Store token and user data in localStorage
     if (result.token) {
       localStorage.setItem('token', result.token);
+      localStorage.setItem('userData', JSON.stringify(result.user));
     }
 
     return result;
@@ -65,7 +72,7 @@ class ApiService {
     return response.json();
   }
 
-  // Book endpoints - UPDATED METHOD NAMES
+  // Book endpoints
   async getBooks() {
     const response = await fetch(`${this.baseURL}/books`, {
       headers: this.getHeaders()
@@ -94,7 +101,6 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  // CHANGED: createBook → addBook (to match component)
   async addBook(bookData) {
     const response = await fetch(`${this.baseURL}/books`, {
       method: 'POST',
@@ -104,7 +110,6 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  // ADDED: createBook alias for backward compatibility
   async createBook(bookData) {
     return this.addBook(bookData);
   }
@@ -158,7 +163,7 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  // Borrowing endpoints
+  // Borrowing endpoints - UPDATED AND ENHANCED
   async getBorrowings() {
     const response = await fetch(`${this.baseURL}/borrowings`, {
       headers: this.getHeaders()
@@ -180,10 +185,20 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async borrowBook(userId, bookId) {
-    const response = await fetch(`${this.baseURL}/borrowings/borrow?userId=${userId}&bookId=${bookId}`, {
+  // ENHANCED: Borrow book with current user context
+  // In your api.js - make sure it looks like this:
+  // Borrowing endpoints - FIXED
+  async borrowBook(bookId) {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    // ✅ FIXED: Send userId and bookId as query parameters, not in request body
+    const response = await fetch(`${this.baseURL}/borrowings/borrow?userId=${currentUser.id}&bookId=${bookId}`, {
       method: 'POST',
       headers: this.getHeaders()
+      // ✅ REMOVED: body: JSON.stringify({ userId: currentUser.id, bookId: bookId })
     });
 
     if (!response.ok) {
@@ -194,6 +209,7 @@ class ApiService {
     return response.json();
   }
 
+  // ENHANCED: Return book
   async returnBook(borrowingId) {
     const response = await fetch(`${this.baseURL}/borrowings/return/${borrowingId}`, {
       method: 'POST',
@@ -202,8 +218,34 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // NEW: Get current user's borrowings
+  async getMyBorrowings() {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    return this.getUserBorrowings(currentUser.id);
+  }
+
+  // NEW: Get current user's active borrowings
+  async getMyActiveBorrowings() {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+    return this.getUserActiveBorrowings(currentUser.id);
+  }
+
   async getOverdueBorrowings() {
     const response = await fetch(`${this.baseURL}/borrowings/overdue`, {
+      headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  // NEW: Get borrowing by ID
+  async getBorrowingById(id) {
+    const response = await fetch(`${this.baseURL}/borrowings/${id}`, {
       headers: this.getHeaders()
     });
     return this.handleResponse(response);

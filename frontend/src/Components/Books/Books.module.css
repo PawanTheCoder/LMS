@@ -19,6 +19,51 @@
     align-items: center;
 }
 
+/* Add to your existing Books.module.css */
+.bookActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.infoButton {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex: 1;
+}
+
+.infoButton:hover {
+    background-color: #2563eb;
+}
+
+.editButton {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex: 1;
+}
+
+.editButton:hover {
+    background-color: #059669;
+}
+
 /* Search Input */
 .searchContainer {
     display: flex;
@@ -125,7 +170,7 @@
 
 .bookCover img {
     width: 100%;
-    height: 100%;
+    height: 300px;
     object-fit: cover;
 }
 
@@ -167,7 +212,9 @@
 .bookCategory,
 .bookYear {
     font-size: 0.8rem;
-    color: var(--color-text-secondary);
+    color: cyan;
+    font-weight: bold;
+    padding-left: 10px;
 }
 
 /* ✅ Rating Section */
@@ -176,11 +223,12 @@
     align-items: center;
     gap: 0.25rem;
     margin-top: 0.25rem;
+    color: yellow;
 }
 
 .ratingText {
     font-size: 0.75rem;
-    color: var(--color-text-secondary);
+    color: orange;
 }
 
 /* ✅ Description */
@@ -217,7 +265,7 @@
 
 .infoButton {
     background: transparent;
-    color: var(--color-green);
+    color: lime;
     border: 1px solid var(--color-green);
 }
 
@@ -229,7 +277,7 @@
 .editButton {
     background: transparent;
     color: var(--color-blue);
-    border: 1px solid var(--color-blue);
+    border: 1px solid rgb(68, 214, 255);
 }
 
 .editButton:hover {

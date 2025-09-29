@@ -7,6 +7,8 @@ import LoadingSpinner from './Components/LoadingSpinner';
 // Lazy load pages
 const Dashboard = lazy(() => import('./Components/Dashboard/Dashboard'));
 const Books = lazy(() => import('./Components/Books/Books'));
+const BookDetails = lazy(() => import('./Components/Books/BookDetails'));
+const EditBook = lazy(() => import('./Components/Books/EditBook'));
 const Users = lazy(() => import('./Components/Users/Users'));
 const ManageBooks = lazy(() => import('./Components/ManageBooks/ManageBooks'));
 const StudentPanel = lazy(() => import('./Components/Student/StudentPanel'));
@@ -72,13 +74,21 @@ const AppContent = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+
+              {/* Books Routes */}
               <Route path="/books" element={<Books />} />
+              <Route path="/books/:id" element={<BookDetails />} />
+              <Route path="/books/:id/edit" element={<EditBook />} />
+
               <Route path="/users" element={<Users />} />
               <Route path="/manage-books" element={<ManageBooks />} />
               <Route path="/student" element={<StudentPanel />} />
               <Route path="/about" element={<AboutDev />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
+
+              {/* Catch all route - redirect to dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
         </main>

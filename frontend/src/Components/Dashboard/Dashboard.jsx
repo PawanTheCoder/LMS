@@ -17,8 +17,8 @@ const Dashboard = () => {
   const [categoryData, setCategoryData] = useState([]);
   const [error, setError] = useState(null);
 
-  // Main categories to show individually
-  const mainCategories = ['fiction', 'fantasy', 'programming'];
+  // Define the main categories we want to track
+  const mainCategories = ['fiction', 'non-fiction', 'manga'];
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -55,14 +55,14 @@ const Dashboard = () => {
         if (borrowingsResponse.status === 'rejected') console.error('Borrowings API failed:', borrowingsResponse.reason);
         if (overdueResponse.status === 'rejected') console.error('Overdue API failed:', overdueResponse.reason);
 
-        // Calculate category statistics with grouping
+        // Calculate category statistics with proper grouping
         const categoryCounts = {};
         let otherCount = 0;
 
         books.forEach(book => {
           const category = book.category?.trim().toLowerCase() || 'uncategorized';
 
-          // Check if this is a main category
+          // Check if this is one of our main categories
           if (mainCategories.includes(category)) {
             categoryCounts[category] = (categoryCounts[category] || 0) + 1;
           } else {
@@ -71,56 +71,85 @@ const Dashboard = () => {
           }
         });
 
-        // Convert main categories to array
-        const categoryArray = mainCategories
-          .filter(category => categoryCounts[category] > 0)
-          .map(category => ({
-            category: category.charAt(0).toUpperCase() + category.slice(1),
-            count: categoryCounts[category],
-            percentage: books.length > 0 ? ((categoryCounts[category] / books.length) * 100).toFixed(1) : '0'
-          }));
+        // Convert to array format for the chart with proper labels
+        const categoryArray = mainCategories.map(category => ({
+          category: category.charAt(0).toUpperCase() + category.slice(1),
+          count: categoryCounts[category] || 0,
+          percentage: books.length > 0 ? ((categoryCounts[category] || 0) / books.length * 100).toFixed(1) : '0'
+        }));
 
         // Add "Other" category if there are any books in other categories
         if (otherCount > 0) {
           categoryArray.push({
             category: 'Other',
             count: otherCount,
-            percentage: books.length > 0 ? ((otherCount / books.length) * 100).toFixed(1) : '0'
+            percentage: books.length > 0 ? (otherCount / books.length * 100).toFixed(1) : '0'
           });
         }
 
-        setCategoryData(categoryArray);
+        // Filter out categories with 0 books
+        const filteredCategoryArray = categoryArray.filter(item => item.count > 0);
+        setCategoryData(filteredCategoryArray);
 
         // Set stats - handle cases where data might be missing
+        const activeBorrowings = Array.isArray(borrowings) ?
+          borrowings.filter(b => b.status === 'BORROWED' || b.returnDate === null) : [];
+
         setStats({
           totalBooks: books.length || 0,
           totalUsers: users.length || 0,
-          booksBorrowed: Array.isArray(borrowings) ? borrowings.filter(b => b.status === 'BORROWED').length : 0,
+          booksBorrowed: activeBorrowings.length,
           overdueBooks: Array.isArray(overdueBorrowings) ? overdueBorrowings.length : 0
         });
 
-        // Create recent activity from borrowings data
-        let recentBorrowings = [];
+        // Create REAL recent activity from borrowings data
+        let recentActivities = [];
         if (Array.isArray(borrowings)) {
-          recentBorrowings = borrowings
-            .slice(0, 5)
-            .map((borrowing, index) => ({
+          // Sort borrowings by most recent first (assuming there's a borrowDate field)
+          const sortedBorrowings = [...borrowings]
+            .sort((a, b) => new Date(b.borrowDate || b.createdAt) - new Date(a.borrowDate || a.createdAt))
+            .slice(0, 6); // Get 6 most recent
+
+          recentActivities = sortedBorrowings.map((borrowing, index) => {
+            const isReturned = borrowing.status === 'RETURNED' || borrowing.returnDate !== null;
+            const isOverdue = borrowing.dueDate && new Date(borrowing.dueDate) < new Date() && !isReturned;
+
+            let action, type, timeText;
+
+            if (isReturned) {
+              action = 'Book returned';
+              type = 'return';
+              timeText = `Returned on ${new Date(borrowing.returnDate).toLocaleDateString()}`;
+            } else if (isOverdue) {
+              action = 'Book overdue';
+              type = 'overdue';
+              const daysOverdue = Math.ceil((new Date() - new Date(borrowing.dueDate)) / (1000 * 60 * 60 * 24));
+              timeText = `${daysOverdue} days overdue`;
+            } else {
+              action = 'Book borrowed';
+              type = 'borrow';
+              timeText = `Due on ${new Date(borrowing.dueDate).toLocaleDateString()}`;
+            }
+
+            return {
               id: borrowing.id || index,
-              action: borrowing.status === 'BORROWED' ? 'Book borrowed' : 'Book returned',
+              action,
               book: borrowing.book?.title || 'Unknown Book',
               user: borrowing.user ? `${borrowing.user.firstName} ${borrowing.user.lastName}` : 'Unknown User',
-              time: `${index + 1} hours ago`,
-              type: borrowing.status === 'BORROWED' ? 'borrow' : 'return'
-            }));
+              time: timeText,
+              type
+            };
+          });
         }
 
-        setRecentActivity(recentBorrowings);
+        setRecentActivity(recentActivities);
 
         console.log('Dashboard data loaded successfully:', {
           booksCount: books.length,
           usersCount: users.length,
           borrowingsCount: borrowings.length,
-          categories: categoryArray
+          categories: filteredCategoryArray,
+          recentActivities: recentActivities.length
         });
 
       } catch (error) {
@@ -143,17 +172,16 @@ const Dashboard = () => {
     loadDashboardData();
   }, []);
 
-  // Function to generate colors for categories
-  const getCategoryColor = (category, index) => {
+  // Function to generate vibrant colors for categories
+  const getCategoryColor = (category) => {
     const colorMap = {
-      'fiction': 'var(--color-blue)',
-      'fantasy': 'var(--color-green)',
-      'programming': 'lime',
-      'other': 'var(--color-text-secondary)'
+      'Fiction': '#FF6B6B',     // Vibrant Red
+      'Non-fiction': '#4ECDC4',  // Vibrant Teal
+      'Manga': '#45B7D1',       // Vibrant Blue
+      'Other': '#FFA07A'        // Vibrant Light Salmon
     };
 
-    return colorMap[category.toLowerCase()] ||
-      colorMap[Object.keys(colorMap)[index % Object.keys(colorMap).length]];
+    return colorMap[category] || '#96CEB4'; // Fallback color
   };
 
   // Function to render the pie chart with real data
@@ -167,29 +195,37 @@ const Dashboard = () => {
       );
     }
 
+    // Calculate conic gradient for pie chart
+    let currentAngle = 0;
+    const gradientStops = categoryData.map(item => {
+      const percentage = parseFloat(item.percentage);
+      const startAngle = currentAngle;
+      const endAngle = startAngle + (percentage * 3.6); // Convert percentage to degrees
+      currentAngle = endAngle;
+
+      return `${getCategoryColor(item.category)} ${startAngle}deg ${endAngle}deg`;
+    }).join(', ');
+
     return (
       <div className={styles.chartContent}>
-        <div className={styles.pieChart}>
-          {categoryData.map((item, index) => (
-            <div
-              key={item.category}
-              className={styles.pieSlice}
-              style={{
-                '--percentage': `${item.percentage}%`,
-                '--color': getCategoryColor(item.category, index)
-              }}
-              title={`${item.category}: ${item.percentage}%`}
-            ></div>
-          ))}
+        <div
+          className={styles.pieChart}
+          style={{
+            background: `conic-gradient(${gradientStops})`
+          }}
+        >
+          <div className={styles.pieCenter}></div>
         </div>
         <div className={styles.chartLegend}>
           {categoryData.map((item, index) => (
             <div key={item.category} className={styles.legendItem}>
               <span
                 className={styles.legendColor}
-                style={{ backgroundColor: getCategoryColor(item.category, index) }}
+                style={{ backgroundColor: getCategoryColor(item.category) }}
               ></span>
-              <span>{item.category} ({item.percentage}%)</span>
+              <span className={styles.legendText}>
+                {item.category} ({item.percentage}%) - {item.count} books
+              </span>
             </div>
           ))}
         </div>
@@ -199,23 +235,19 @@ const Dashboard = () => {
 
   const getActivityIcon = (type) => {
     switch (type) {
-      case 'book': return <BookOpen size={16} />;
-      case 'user': return <Users size={16} />;
-      case 'borrow': return <TrendingUp size={16} />;
-      case 'return': return <Clock size={16} />;
+      case 'borrow': return <BookOpen size={16} />;
+      case 'return': return <TrendingUp size={16} />;
       case 'overdue': return <AlertCircle size={16} />;
-      default: return <BookOpen size={16} />;
+      default: return <Clock size={16} />;
     }
   };
 
   const getActivityColor = (type) => {
     switch (type) {
-      case 'book': return 'var(--color-green)';
-      case 'user': return 'var(--color-blue)';
-      case 'borrow': return 'var(--color-accent)';
-      case 'return': return 'var(--color-green)';
-      case 'overdue': return '#dc3545';
-      default: return 'var(--color-text-secondary)';
+      case 'borrow': return '#3B82F6'; // Blue
+      case 'return': return '#10B981'; // Green
+      case 'overdue': return '#EF4444'; // Red
+      default: return '#6B7280'; // Gray
     }
   };
 
@@ -306,14 +338,14 @@ const Dashboard = () => {
       <div className={styles.chartsSection}>
         <div className={styles.chartCard}>
           <h3 className={styles.chartTitle}>Book Categories</h3>
-          <div className={styles.chartPlaceholder}>
+          <div className={styles.chartContainer}>
             {Chart()}
           </div>
         </div>
 
         <div className={styles.chartCard}>
           <h3 className={styles.chartTitle}>Monthly Activity</h3>
-          <div className={styles.chartPlaceholder}>
+          <div className={styles.chartContainer}>
             <div className={styles.barChart}>
               {[65, 80, 45, 90, 70, 85, 95, 60, 75, 88, 92, 78].map((height, index) => (
                 <div
@@ -336,22 +368,20 @@ const Dashboard = () => {
           {recentActivity.length === 0 ? (
             <div className={styles.noData}>
               <Clock size={32} />
-              <p>No recent activity</p>
+              <p>No recent activity found</p>
             </div>
           ) : (
             recentActivity.map((activity) => (
               <div key={activity.id} className={styles.activityItem}>
                 <div
                   className={styles.activityIcon}
-                  style={{ color: getActivityColor(activity.type) }}
+                  style={{ backgroundColor: `${getActivityColor(activity.type)}20`, color: getActivityColor(activity.type) }}
                 >
                   {getActivityIcon(activity.type)}
                 </div>
                 <div className={styles.activityContent}>
                   <p className={styles.activityText}>
-                    <strong>{activity.action}</strong>
-                    {activity.book && ` - ${activity.book}`}
-                    {activity.user && ` by ${activity.user}`}
+                    <strong>{activity.user}</strong> - {activity.action}: "{activity.book}"
                   </p>
                   <span className={styles.activityTime}>{activity.time}</span>
                 </div>

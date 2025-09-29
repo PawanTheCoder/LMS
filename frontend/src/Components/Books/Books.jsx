@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, BookOpen, User, Calendar, Star, Eye, EyeOff } from 'lucide-react';
 import apiService from '../../services/api';
 import styles from './Books.module.css';
@@ -11,6 +12,7 @@ const Books = () => {
   const [sortBy, setSortBy] = useState('title');
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const navigate = useNavigate();
 
   const categories = ['all', 'fiction', 'non-fiction', 'reference', 'textbook', 'biography'];
 
@@ -88,6 +90,14 @@ const Books = () => {
 
   const toggleViewMode = () => {
     setViewMode(viewMode === 'grid' ? 'list' : 'grid');
+  };
+
+  const handleViewDetails = (bookId) => {
+    navigate(`/books/${bookId}`);
+  };
+
+  const handleEditBook = (bookId) => {
+    navigate(`/books/${bookId}/edit`);
   };
 
   const renderStars = (rating) => {
@@ -186,7 +196,6 @@ const Books = () => {
         </div>
       </div>
 
-
       {/* Books Grid/List */}
       <div className={`${styles.booksGrid} ${viewMode === 'list' ? styles.listView : ''}`}>
         {filteredBooks.length === 0 ? (
@@ -239,11 +248,17 @@ const Books = () => {
                 )}
 
                 <div className={styles.bookActions}>
-                  <button className={styles.infoButton}>
+                  <button
+                    className={styles.infoButton}
+                    onClick={() => handleViewDetails(book.id)}
+                  >
                     <Eye size={16} />
                     View Details
                   </button>
-                  <button className={styles.editButton}>
+                  <button
+                    className={styles.editButton}
+                    onClick={() => handleEditBook(book.id)}
+                  >
                     <BookOpen size={16} />
                     Edit Book
                   </button>
