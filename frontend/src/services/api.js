@@ -188,22 +188,34 @@ class ApiService {
   // ENHANCED: Borrow book with current user context
   // In your api.js - make sure it looks like this:
   // Borrowing endpoints - FIXED
+  // ENHANCED: Borrow book with proper error handling and validation
   async borrowBook(bookId) {
     const currentUser = this.getCurrentUser();
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
 
-    // ✅ FIXED: Send userId and bookId as query parameters, not in request body
     const response = await fetch(`${this.baseURL}/borrowings/borrow?userId=${currentUser.id}&bookId=${bookId}`, {
       method: 'POST',
       headers: this.getHeaders()
-      // ✅ REMOVED: body: JSON.stringify({ userId: currentUser.id, bookId: bookId })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || 'Failed to borrow book');
+    }
+
+    return response.json();
+  }
+
+  // NEW: Check if user can borrow more books
+  async canUserBorrow(userId) {
+    const response = await fetch(`${this.baseURL}/borrowings/user/${userId}/can-borrow`, {
+      headers: this.getHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to check borrowing eligibility');
     }
 
     return response.json();
