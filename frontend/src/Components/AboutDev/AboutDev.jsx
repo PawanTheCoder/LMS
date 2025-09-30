@@ -79,7 +79,7 @@ const AboutDev = () => {
       icon: <Globe size={20} />
     },
     {
-      title: 'Modern UI/UX',
+      title: 'Modern UI/UXfont',
       description: 'Clean, intuitive interface with smooth animations',
       icon: <Award size={20} />
     }
@@ -224,7 +224,7 @@ const AboutDev = () => {
             <div className={styles.infoContent}>
               <h4>Frontend Repository</h4>
               <p>React-based user interface with modern design patterns</p>
-              <a href="https://github.com/PawanTheCoder/Library_Management_Web/tree/main/frontend" className={styles.infoLink}>View on GitHub</a>
+              <a href="https://github.com/PawanTheCoder/LMS/tree/main/frontend" className={styles.infoLink}>View on GitHub</a>
             </div>
           </div>
           <div className={styles.infoCard}>
@@ -232,7 +232,7 @@ const AboutDev = () => {
             <div className={styles.infoContent}>
               <h4>Backend Repository</h4>
               <p>Spring Boot REST API with MySQL database</p>
-              <a href="https://github.com/PawanTheCoder/Library_Management_Web/tree/main/backend" className={styles.infoLink}>View on GitHub</a>
+              <a href="https://github.com/PawanTheCoder/LMS/tree/main/backend" className={styles.infoLink}>View on GitHub</a>
             </div>
           </div>
         </div>
@@ -241,7 +241,7 @@ const AboutDev = () => {
       {/* Footer */}
       <div className={styles.footer}>
         <p className={styles.footerText}>
-          Built with ❤️ by the development team • 2024
+          Built with ❤️ by the development team • 2025
         </p>
       </div>
     </div>

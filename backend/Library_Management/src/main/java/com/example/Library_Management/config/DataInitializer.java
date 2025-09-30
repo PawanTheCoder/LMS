@@ -1,9 +1,7 @@
 package com.example.Library_Management.config;
 
 import com.example.Library_Management.entity.User;
-import com.example.Library_Management.entity.Book;
 import com.example.Library_Management.repository.UserRepository;
-import com.example.Library_Management.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -13,9 +11,6 @@ public class DataInitializer implements CommandLineRunner {
 
         @Autowired
         private UserRepository userRepository;
-
-        @Autowired
-        private BookRepository bookRepository;
 
         @Override
         public void run(String... args) throws Exception {
