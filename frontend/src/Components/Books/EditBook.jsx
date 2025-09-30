@@ -21,7 +21,7 @@ const EditBook = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
 
-    const categories = ['fiction', 'non-fiction', 'reference', 'textbook', 'biography'];
+    const categories = ['fiction', 'non-fiction', 'reference', 'textbook', 'biography', 'Manga', 'Horror', 'Romance', 'Mystery', 'Dystopian'];
 
     useEffect(() => {
         const loadBook = async () => {
