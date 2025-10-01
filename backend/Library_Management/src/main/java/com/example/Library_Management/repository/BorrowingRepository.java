@@ -14,19 +14,25 @@ import java.util.List;
 
 @Repository
 public interface BorrowingRepository extends JpaRepository<Borrowing, Long> {
+
+    // Basic CRUD operations
     List<Borrowing> findByUser(User user);
+
     List<Borrowing> findByUserAndStatus(User user, BorrowStatus status);
+
     List<Borrowing> findByBook(Book book);
+
     List<Borrowing> findByStatus(BorrowStatus status);
-    
+
+    // Custom queries
     @Query("SELECT b FROM Borrowing b WHERE b.user = :user ORDER BY b.borrowDate DESC")
     List<Borrowing> findByUserOrderByBorrowDateDesc(@Param("user") User user);
-    
+
     @Query("SELECT b FROM Borrowing b WHERE b.dueDate < :currentDate AND b.status = 'BORROWED'")
     List<Borrowing> findOverdueBorrowings(@Param("currentDate") LocalDateTime currentDate);
-    
+
     @Query("SELECT COUNT(b) FROM Borrowing b WHERE b.user = :user AND b.status = 'BORROWED'")
     Long countActiveBorrowingsByUser(@Param("user") User user);
-    
+
     boolean existsByUserAndBookAndStatus(User user, Book book, BorrowStatus status);
 }

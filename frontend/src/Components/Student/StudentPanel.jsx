@@ -18,8 +18,95 @@ const StudentPanel = () => {
   const [activeTab, setActiveTab] = useState('browse');
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [canBorrowMore, setCanBorrowMore] = useState(true);
 
   const categories = ['all', 'fiction', 'fantasy', 'programming', 'non-fiction', 'reference', 'textbook', 'biography', 'science', 'history', 'other'];
+
+  const loadStudentData = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log('Loading student data for user:', user?.id);
+
+      // Fetch all data in parallel
+      const [booksData, activeBorrowingsData, historyBorrowingsData, canBorrowData] = await Promise.all([
+        apiService.getAvailableBooks().catch(err => {
+          console.error('Error fetching available books:', err);
+          return [];
+        }),
+        user?.id ? apiService.getUserActiveBorrowings(user.id).catch(err => {
+          console.error('Error fetching active borrowings:', err);
+          return [];
+        }) : Promise.resolve([]),
+        user?.id ? apiService.getUserBorrowings(user.id).catch(err => {
+          console.error('Error fetching user borrowings:', err);
+          return [];
+        }) : Promise.resolve([]),
+        user?.id ? apiService.canUserBorrow(user.id).catch(err => {
+          console.error('Error checking borrowing eligibility:', err);
+          return { canBorrow: true };
+        }) : Promise.resolve({ canBorrow: true })
+      ]);
+
+      console.log('Books data:', booksData);
+      console.log('Active borrowings:', activeBorrowingsData);
+      console.log('All borrowings:', historyBorrowingsData);
+      console.log('Can borrow data:', canBorrowData);
+
+      setBooks(booksData || []);
+      setFilteredBooks(booksData || []);
+      setCanBorrowMore(canBorrowData.canBorrow);
+
+      // Separate active borrowings and history from all borrowings
+      const activeBorrowings = (historyBorrowingsData || []).filter(b =>
+        b.status === 'BORROWED' || b.status === 'ACTIVE' || b.status === 'PENDING'
+      );
+      const history = (historyBorrowingsData || []).filter(b =>
+        b.status === 'RETURNED' || b.status === 'COMPLETED' || b.status === 'OVERDUE'
+      );
+
+      // Use active borrowings from dedicated endpoint if available, otherwise use filtered data
+      setBorrowedBooks(activeBorrowingsData.length > 0 ? activeBorrowingsData : activeBorrowings);
+      setBorrowingHistory(history);
+
+    } catch (error) {
+      console.error('Error loading student data:', error);
+      setError('Failed to load data. Please try again.');
+      setBooks([]);
+      setFilteredBooks([]);
+      setBorrowedBooks([]);
+      setBorrowingHistory([]);
+    }
+
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      loadStudentData();
+    } else {
+      setIsLoading(false);
+      setError('User not found. Please log in again.');
+    }
+  }, [user?.id]);
+
+  // Reload data when switching to "My Books" tab to ensure fresh data
+  useEffect(() => {
+    if (activeTab === 'borrowed' && user?.id) {
+      loadBorrowedBooks();
+    }
+  }, [activeTab]);
+
+  const loadBorrowedBooks = async () => {
+    try {
+      const activeBorrowings = await apiService.getUserActiveBorrowings(user.id);
+      console.log('Reloaded active borrowings:', activeBorrowings);
+      setBorrowedBooks(activeBorrowings || []);
+    } catch (error) {
+      console.error('Error reloading borrowed books:', error);
+    }
+  };
 
   useEffect(() => {
     const loadStudentData = async () => {
@@ -29,8 +116,8 @@ const StudentPanel = () => {
       try {
         console.log('Loading student data for user:', user?.id);
 
-        // Fetch real data from API
-        const [booksData, borrowingsData] = await Promise.all([
+        // Fetch all data in parallel
+        const [booksData, borrowingsData, canBorrowData] = await Promise.all([
           apiService.getAvailableBooks().catch(err => {
             console.error('Error fetching available books:', err);
             return [];
@@ -38,18 +125,28 @@ const StudentPanel = () => {
           user?.id ? apiService.getUserBorrowings(user.id).catch(err => {
             console.error('Error fetching user borrowings:', err);
             return [];
-          }) : Promise.resolve([])
+          }) : Promise.resolve([]),
+          user?.id ? apiService.canUserBorrow(user.id).catch(err => {
+            console.error('Error checking borrowing eligibility:', err);
+            return { canBorrow: true }; // Default to true if check fails
+          }) : Promise.resolve({ canBorrow: true })
         ]);
 
         console.log('Books data:', booksData);
         console.log('Borrowings data:', borrowingsData);
+        console.log('Can borrow data:', canBorrowData);
 
         setBooks(booksData || []);
         setFilteredBooks(booksData || []);
+        setCanBorrowMore(canBorrowData.canBorrow);
 
         // Separate active borrowings and history
-        const activeBorrowings = (borrowingsData || []).filter(b => b.status === 'BORROWED' || b.status === 'ACTIVE');
-        const history = (borrowingsData || []).filter(b => b.status === 'RETURNED' || b.status === 'COMPLETED');
+        const activeBorrowings = (borrowingsData || []).filter(b =>
+          b.status === 'BORROWED' || b.status === 'ACTIVE' || b.status === 'PENDING'
+        );
+        const history = (borrowingsData || []).filter(b =>
+          b.status === 'RETURNED' || b.status === 'COMPLETED' || b.status === 'OVERDUE'
+        );
 
         setBorrowedBooks(activeBorrowings);
         setBorrowingHistory(history);
@@ -57,7 +154,6 @@ const StudentPanel = () => {
       } catch (error) {
         console.error('Error loading student data:', error);
         setError('Failed to load data. Please try again.');
-        // Fallback to empty arrays if API fails
         setBooks([]);
         setFilteredBooks([]);
         setBorrowedBooks([]);
@@ -136,50 +232,36 @@ const StudentPanel = () => {
       return;
     }
 
+    if (!canBorrowMore) {
+      setError('You cannot borrow more books. Please return your current books first.');
+      return;
+    }
+
     setActionLoading(`borrow-${bookId}`);
     setError(null);
 
     try {
-      console.log('🔍 Borrow attempt:', {
-        userId: user.id,
-        bookId: bookId
-      });
+      console.log('🔍 Borrow attempt for book:', bookId);
 
       // Borrow the book
-      const result = await apiService.borrowBook(user.id, bookId);
+      const result = await apiService.borrowBook(bookId);
       console.log('✅ Borrow successful:', result);
 
-      // Update the books list - remove the borrowed book from available books
-      const updatedBooks = books.filter(book => book.id !== bookId);
-      setBooks(updatedBooks);
-      setFilteredBooks(updatedBooks);
-
-      // Add the borrowed book to the borrowed books list
-      // Create a proper borrowing object with the book details
-      const borrowedBook = books.find(book => book.id === bookId);
-      if (borrowedBook) {
-        const newBorrowing = {
-          id: result.id || Date.now(), // Use the ID from backend or fallback
-          book: {
-            id: borrowedBook.id,
-            title: borrowedBook.title,
-            author: borrowedBook.author,
-            category: borrowedBook.category
-          },
-          borrowDate: result.borrowDate || new Date().toISOString(),
-          dueDate: result.dueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
-          status: 'BORROWED'
-        };
-
-        setBorrowedBooks(prev => [...prev, newBorrowing]);
-      }
+      // Reload all data to ensure consistency
+      await loadStudentData();
 
       // Show success message
       setError({ type: 'success', text: 'Book borrowed successfully!' });
 
     } catch (error) {
       console.error('❌ Borrow failed:', error);
-      setError(error.message || 'Failed to borrow book. Please try again.');
+      const errorMessage = error.message || 'Failed to borrow book. Please try again.';
+
+      if (errorMessage.includes('already borrowed') || errorMessage.includes('cannot borrow')) {
+        setCanBorrowMore(false);
+      }
+
+      setError(errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -191,21 +273,15 @@ const StudentPanel = () => {
 
     try {
       console.log('Returning borrowing:', borrowingId);
-      await apiService.returnBook(borrowingId);
+      const result = await apiService.returnBook(borrowingId);
+      console.log('✅ Return successful:', result);
 
-      // Reload data after successful return
-      if (user?.id) {
-        const borrowingsData = await apiService.getUserBorrowings(user.id).catch(err => {
-          console.error('Error reloading borrowings:', err);
-          return [...borrowedBooks, ...borrowingHistory];
-        });
+      // Reload all data after successful return
+      await loadStudentData();
 
-        const activeBorrowings = (borrowingsData || []).filter(b => b.status === 'BORROWED' || b.status === 'ACTIVE');
-        const history = (borrowingsData || []).filter(b => b.status === 'RETURNED' || b.status === 'COMPLETED');
+      // Show success message
+      setError({ type: 'success', text: 'Book returned successfully!' });
 
-        setBorrowedBooks(activeBorrowings);
-        setBorrowingHistory(history);
-      }
     } catch (error) {
       console.error('Error returning book:', error);
       setError(error.message || 'Failed to return book. Please try again.');
@@ -250,6 +326,73 @@ const StudentPanel = () => {
     return borrowedBooks.some(borrowing => borrowing.book?.id === bookId);
   };
 
+  const isOverdue = (dueDate) => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
+  };
+
+  // Fix the "My Books" tab rendering
+  const renderBorrowedBooks = () => {
+    if (borrowedBooks.length === 0) {
+      return (
+        <div className={styles.noBooks}>
+          <Clock size={48} />
+          <h3>No borrowed books</h3>
+          <p>You haven't borrowed any books yet</p>
+          <button
+            className={styles.browseButton}
+            onClick={() => setActiveTab('browse')}
+          >
+            Browse Books
+          </button>
+        </div>
+      );
+    }
+
+    return borrowedBooks.map(borrowing => {
+      const isReturning = actionLoading === `return-${borrowing.id}`;
+      const overdue = isOverdue(borrowing.dueDate);
+
+      return (
+        <div key={borrowing.id} className={`${styles.borrowedCard} ${overdue ? styles.overdue : ''}`}>
+          <div className={styles.bookInfo}>
+            <h3 className={styles.bookTitle}>{borrowing.book?.title || 'Unknown Book'}</h3>
+            <p className={styles.bookAuthor}>by {borrowing.book?.author || 'Unknown Author'}</p>
+            <div className={styles.borrowingDetails}>
+              <p><strong>Borrowed:</strong> {formatDate(borrowing.borrowDate)}</p>
+              <p><strong>Due:</strong> {formatDate(borrowing.dueDate)}</p>
+              <p><strong>Status:</strong>
+                <span className={borrowing.status === 'OVERDUE' ? styles.overdueText : styles.statusText}>
+                  {borrowing.status}
+                </span>
+              </p>
+              {overdue && (
+                <p className={styles.overdueWarning}>
+                  <AlertCircle size={14} />
+                  Overdue - Please return immediately
+                </p>
+              )}
+            </div>
+          </div>
+          <div className={styles.borrowingActions}>
+            <button
+              className={styles.returnButton}
+              onClick={() => handleReturnBook(borrowing.id)}
+              disabled={isReturning}
+            >
+              {isReturning ? (
+                <div className={styles.smallSpinner}></div>
+              ) : (
+                <CheckCircle size={16} />
+              )}
+              {isReturning ? 'Returning...' : 'Return Book'}
+            </button>
+          </div>
+        </div>
+      );
+    });
+  };
+
   if (isLoading) {
     return (
       <div className={styles.studentContainer}>
@@ -267,16 +410,21 @@ const StudentPanel = () => {
         <div>
           <h1 className={styles.studentTitle}>Mayur's Library</h1>
           <p className={styles.studentSubtitle}>
-            Welcome back, {user?.firstName || user?.username || 'Student'}! Manage your books and borrowing.
+            Welcome back, {user?.firstName || user?.username || 'Student'}!
+            {!canBorrowMore && borrowedBooks.length > 0 && (
+              <span className={styles.borrowingWarning}>
+                You have {borrowedBooks.length} book(s) borrowed. Return them to borrow more.
+              </span>
+            )}
           </p>
         </div>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className={styles.errorMessage}>
+        <div className={`${styles.errorMessage} ${error.type === 'success' ? styles.successMessage : ''}`}>
           <AlertCircle size={16} />
-          <span>{error}</span>
+          <span>{error.text || error}</span>
           <button
             onClick={() => setError(null)}
             className={styles.dismissError}
@@ -370,6 +518,14 @@ const StudentPanel = () => {
             </div>
           </div>
 
+          {/* Borrowing Status Alert */}
+          {!canBorrowMore && (
+            <div className={styles.borrowingAlert}>
+              <AlertCircle size={16} />
+              <span>You cannot borrow more books until you return your current books.</span>
+            </div>
+          )}
+
           {/* Books Grid/List */}
           <div className={`${styles.booksGrid} ${viewMode === 'list' ? styles.listView : ''}`}>
             {filteredBooks.length === 0 ? (
@@ -382,6 +538,7 @@ const StudentPanel = () => {
               filteredBooks.map(book => {
                 const isAlreadyBorrowed = isBookBorrowed(book.id);
                 const isBorrowing = actionLoading === `borrow-${book.id}`;
+                const canBorrow = canBorrowMore && book.availableCopies > 0 && !isAlreadyBorrowed;
 
                 return (
                   <div key={book.id} className={styles.bookCard}>
@@ -431,6 +588,11 @@ const StudentPanel = () => {
                             <CheckCircle size={16} />
                             Already Borrowed
                           </button>
+                        ) : !canBorrowMore ? (
+                          <button className={styles.cannotBorrowButton} disabled>
+                            <AlertCircle size={16} />
+                            Return Books to Borrow
+                          </button>
                         ) : book.availableCopies > 0 ? (
                           <button
                             className={styles.borrowButton}
@@ -462,51 +624,20 @@ const StudentPanel = () => {
       {/* Borrowed Books Tab */}
       {activeTab === 'borrowed' && (
         <div className={styles.tabContent}>
-          <div className={styles.borrowedBooks}>
-            {borrowedBooks.length === 0 ? (
-              <div className={styles.noBooks}>
-                <Clock size={48} />
-                <h3>No borrowed books</h3>
-                <p>You haven't borrowed any books yet</p>
-              </div>
-            ) : (
-              borrowedBooks.map(borrowing => {
-                const isReturning = actionLoading === `return-${borrowing.id}`;
+          <div className={styles.borrowedHeader}>
+            <h2>My Borrowed Books</h2>
+            <p>Books you currently have borrowed</p>
+            <button
+              className={styles.refreshButton}
+              onClick={loadBorrowedBooks}
+              disabled={actionLoading}
+            >
+              Refresh
+            </button>
+          </div>
 
-                return (
-                  <div key={borrowing.id} className={styles.borrowedCard}>
-                    <div className={styles.bookInfo}>
-                      <h3 className={styles.bookTitle}>{borrowing.book?.title}</h3>
-                      <p className={styles.bookAuthor}>by {borrowing.book?.author}</p>
-                      <div className={styles.borrowingDetails}>
-                        <p><strong>Borrowed:</strong> {formatDate(borrowing.borrowDate)}</p>
-                        <p><strong>Due:</strong> {formatDate(borrowing.dueDate)}</p>
-                        {borrowing.overdue && (
-                          <p className={styles.overdueWarning}>
-                            <AlertCircle size={14} />
-                            Overdue
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className={styles.borrowingActions}>
-                      <button
-                        className={styles.returnButton}
-                        onClick={() => handleReturnBook(borrowing.id)}
-                        disabled={isReturning}
-                      >
-                        {isReturning ? (
-                          <div className={styles.smallSpinner}></div>
-                        ) : (
-                          <CheckCircle size={16} />
-                        )}
-                        {isReturning ? 'Returning...' : 'Return Book'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+          <div className={styles.borrowedBooks}>
+            {renderBorrowedBooks()}
           </div>
         </div>
       )}

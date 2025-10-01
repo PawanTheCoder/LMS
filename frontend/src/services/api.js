@@ -239,6 +239,59 @@ class ApiService {
     return this.getUserBorrowings(currentUser.id);
   }
 
+  // In your api.js - Add these methods if missing
+
+  // Get user's active borrowings
+  async getUserActiveBorrowings(userId) {
+    const response = await fetch(`${this.baseURL}/borrowings/user/${userId}/active`, {
+      headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  // Check if user can borrow
+  async canUserBorrow(userId) {
+    const response = await fetch(`${this.baseURL}/borrowings/user/${userId}/can-borrow`, {
+      headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
+
+  // Borrow book
+  async borrowBook(bookId) {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${this.baseURL}/borrowings/borrow?userId=${currentUser.id}&bookId=${bookId}`, {
+      method: 'POST',
+      headers: this.getHeaders()
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to borrow book');
+    }
+
+    return response.json();
+  }
+
+  // Return book
+  async returnBook(borrowingId) {
+    const response = await fetch(`${this.baseURL}/borrowings/return/${borrowingId}`, {
+      method: 'POST',
+      headers: this.getHeaders()
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to return book');
+    }
+
+    return response.json();
+  }
+
   // NEW: Get current user's active borrowings
   async getMyActiveBorrowings() {
     const currentUser = this.getCurrentUser();

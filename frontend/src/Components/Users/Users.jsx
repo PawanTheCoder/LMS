@@ -6,6 +6,7 @@ import styles from './Users.module.css';
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [userHasBorrowed, setUserHasBorrowed] = useState({}); // Track which users have borrowed books
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [sortBy, setSortBy] = useState('name');
@@ -26,6 +27,21 @@ const Users = () => {
 
         setUsers(usersData);
         setFilteredUsers(usersData);
+
+        // Check which users have active borrowings
+        const borrowedMap = {};
+        for (const user of usersData) {
+          try {
+            const borrowings = await apiService.getUserActiveBorrowings(user.id);
+            // If user has any active borrowings, mark as borrowed
+            borrowedMap[user.id] = (borrowings && borrowings.length > 0);
+          } catch (error) {
+            console.error(`Error checking borrowings for user ${user.id}:`, error);
+            borrowedMap[user.id] = false;
+          }
+        }
+        setUserHasBorrowed(borrowedMap);
+
       } catch (error) {
         console.error('Error loading users:', error);
         setError('Failed to load users. Please check your connection.');
@@ -208,78 +224,86 @@ const Users = () => {
               <span>Actions</span>
             </div>
 
-            {filteredUsers.map(user => (
-              <div key={user.id} className={styles.userRow}>
-                <div className={styles.userCell}>
-                  <div className={styles.userAvatar}>
-                    {getUserInitials(user)}
-                  </div>
-                  <div className={styles.userInfo}>
-                    <h4 className={styles.userName}>
-                      {user.firstName} {user.lastName}
-                    </h4>
-                    <p className={styles.userEmail}>{user.email}</p>
-                    <p className={styles.userUsername}>@{user.username}</p>
-                  </div>
-                </div>
+            {filteredUsers.map(user => {
+              const hasBorrowed = userHasBorrowed[user.id] || false;
 
-                <div className={styles.roleCell}>
-                  <span
-                    className={styles.roleBadge}
-                    style={{ backgroundColor: getRoleColor(user.role) }}
-                  >
-                    {user.role}
-                  </span>
-                </div>
+              return (
+                <div key={user.id} className={styles.userRow}>
+                  <div className={styles.userCell}>
+                    <div className={styles.userAvatar}>
+                      {getUserInitials(user)}
+                    </div>
+                    <div className={styles.userInfo}>
+                      <h4 className={styles.userName}>
+                        {user.firstName} {user.lastName}
+                      </h4>
+                      <p className={styles.userEmail}>{user.email}</p>
+                      <p className={styles.userUsername}>@{user.username}</p>
+                    </div>
+                  </div>
 
-                <div className={styles.statusCell}>
-                  <div className={styles.statusIndicator}>
-                    <div
-                      className={`${styles.statusDot} ${user.isActive ? styles.active : styles.inactive}`}
-                    ></div>
-                    <span className={styles.statusText}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                  <div className={styles.roleCell}>
+                    <span
+                      className={styles.roleBadge}
+                      style={{ backgroundColor: getRoleColor(user.role) }}
+                    >
+                      {user.role}
                     </span>
                   </div>
-                </div>
 
-                <div className={styles.booksCell}>
-                  <div className={styles.booksInfo}>
-                    <span className={styles.currentBooks}>0 borrowed</span>
-                    <span className={styles.totalBooks}>0 total</span>
+                  <div className={styles.statusCell}>
+                    <div className={styles.statusIndicator}>
+                      <div
+                        className={`${styles.statusDot} ${user.isActive ? styles.active : styles.inactive}`}
+                      ></div>
+                      <span className={styles.statusText}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={styles.booksCell}>
+                    <div className={styles.booksInfo}>
+                      <span className={styles.currentBooks}>
+                        {hasBorrowed ? '1 borrowed' : '0 borrowed'}
+                      </span>
+                      <span className={styles.totalBooks}>
+                        {hasBorrowed ? '1 total' : '0 total'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={styles.dateCell}>
+                    <span className={styles.lastActive}>
+                      {formatDate(user.updatedAt)}
+                    </span>
+                  </div>
+
+                  <div className={styles.actionsCell}>
+                    <div className={styles.actionButtons}>
+                      <button
+                        className={styles.actionButton}
+                        title="Edit user"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        className={styles.actionButton}
+                        title={user.isActive ? "Deactivate user" : "Activate user"}
+                      >
+                        {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
+                      </button>
+                      <button
+                        className={`${styles.actionButton} ${styles.dangerButton}`}
+                        title="Delete user"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                <div className={styles.dateCell}>
-                  <span className={styles.lastActive}>
-                    {formatDate(user.updatedAt)}
-                  </span>
-                </div>
-
-                <div className={styles.actionsCell}>
-                  <div className={styles.actionButtons}>
-                    <button
-                      className={styles.actionButton}
-                      title="Edit user"
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      className={styles.actionButton}
-                      title={user.isActive ? "Deactivate user" : "Activate user"}
-                    >
-                      {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-                    </button>
-                    <button
-                      className={`${styles.actionButton} ${styles.dangerButton}`}
-                      title="Delete user"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
