@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../App';
-import { BookOpen, Users, Calendar, TrendingUp, Clock, AlertCircle } from 'lucide-react';
+import { BookOpen, Users, Calendar, TrendingUp, Clock, AlertCircle, User, Mail, Phone } from 'lucide-react';
 import apiService from '../../services/api';
 import styles from './Dashboard.module.css';
 
@@ -12,7 +12,7 @@ const Dashboard = () => {
     booksBorrowed: 0,
     overdueBooks: 0
   });
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [categoryData, setCategoryData] = useState([]);
   const [error, setError] = useState(null);
@@ -102,54 +102,59 @@ const Dashboard = () => {
           overdueBooks: Array.isArray(overdueBorrowings) ? overdueBorrowings.length : 0
         });
 
-        // Create REAL recent activity from borrowings data
-        let recentActivities = [];
+        // Load currently borrowed books - FIXED VERSION
+        let borrowedBooksList = [];
         if (Array.isArray(borrowings)) {
-          // Sort borrowings by most recent first (assuming there's a borrowDate field)
-          const sortedBorrowings = [...borrowings]
-            .sort((a, b) => new Date(b.borrowDate || b.createdAt) - new Date(a.borrowDate || a.createdAt))
-            .slice(0, 6); // Get 6 most recent
+          // Filter for currently borrowed books (not returned)
+          const activeBorrowings = borrowings.filter(b =>
+            b.status === 'BORROWED' || b.returnDate === null
+          );
 
-          recentActivities = sortedBorrowings.map((borrowing, index) => {
-            const isReturned = borrowing.status === 'RETURNED' || borrowing.returnDate !== null;
-            const isOverdue = borrowing.dueDate && new Date(borrowing.dueDate) < new Date() && !isReturned;
+          // Sort by due date (soonest first)
+          const sortedBorrowings = [...activeBorrowings]
+            .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+            .slice(0, 8); // Get 8 most urgent
 
-            let action, type, timeText;
+          // Create borrowed books list with available data
+          borrowedBooksList = sortedBorrowings.map((borrowing) => {
+            // Find user details from the users array we already fetched
+            const userDetail = users.find(u => u.id === borrowing.userId);
 
-            if (isReturned) {
-              action = 'Book returned';
-              type = 'return';
-              timeText = `Returned on ${new Date(borrowing.returnDate).toLocaleDateString()}`;
-            } else if (isOverdue) {
-              action = 'Book overdue';
-              type = 'overdue';
-              const daysOverdue = Math.ceil((new Date() - new Date(borrowing.dueDate)) / (1000 * 60 * 60 * 24));
-              timeText = `${daysOverdue} days overdue`;
-            } else {
-              action = 'Book borrowed';
-              type = 'borrow';
-              timeText = `Due on ${new Date(borrowing.dueDate).toLocaleDateString()}`;
-            }
+            const dueDate = new Date(borrowing.dueDate);
+            const today = new Date();
+            const isOverdue = dueDate < today;
+            const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
 
             return {
-              id: borrowing.id || index,
-              action,
-              book: borrowing.book?.title || 'Unknown Book',
-              user: borrowing.user ? `${borrowing.user.firstName} ${borrowing.user.lastName}` : 'Unknown User',
-              time: timeText,
-              type
+              id: borrowing.id,
+              bookId: borrowing.bookId,
+              bookTitle: borrowing.bookTitle || 'Unknown Book',
+              userId: borrowing.userId,
+              username: borrowing.username || 'Unknown User',
+              // User details from the users array
+              userEmail: userDetail?.email || 'N/A',
+              userPhone: userDetail?.phone || 'N/A',
+              userStudentId: userDetail?.studentId || userDetail?.id || 'N/A',
+              userFirstName: userDetail?.firstName || 'Unknown',
+              userLastName: userDetail?.lastName || 'User',
+              borrowDate: new Date(borrowing.borrowDate).toLocaleDateString(),
+              dueDate: dueDate.toLocaleDateString(),
+              isOverdue,
+              daysUntilDue: isOverdue ? -Math.abs(daysUntilDue) : daysUntilDue,
+              status: borrowing.status
             };
           });
         }
 
-        setRecentActivity(recentActivities);
+        setBorrowedBooks(borrowedBooksList);
 
         console.log('Dashboard data loaded successfully:', {
           booksCount: books.length,
           usersCount: users.length,
           borrowingsCount: borrowings.length,
           categories: filteredCategoryArray,
-          recentActivities: recentActivities.length
+          borrowedBooksCount: borrowedBooksList.length,
+          borrowedBooksSample: borrowedBooksList.slice(0, 2) // Log first 2 for debugging
         });
 
       } catch (error) {
@@ -163,7 +168,7 @@ const Dashboard = () => {
           overdueBooks: 0
         });
         setCategoryData([]);
-        setRecentActivity([]);
+        setBorrowedBooks([]);
       }
 
       setIsLoading(false);
@@ -233,22 +238,25 @@ const Dashboard = () => {
     );
   };
 
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'borrow': return <BookOpen size={16} />;
-      case 'return': return <TrendingUp size={16} />;
-      case 'overdue': return <AlertCircle size={16} />;
-      default: return <Clock size={16} />;
-    }
+  const getStatusColor = (isOverdue, daysUntilDue) => {
+    if (isOverdue) return '#EF4444'; // Red for overdue
+    if (daysUntilDue <= 3) return '#F59E0B'; // Amber for due soon
+    return '#10B981'; // Green for normal
   };
 
-  const getActivityColor = (type) => {
-    switch (type) {
-      case 'borrow': return '#3B82F6'; // Blue
-      case 'return': return '#10B981'; // Green
-      case 'overdue': return '#EF4444'; // Red
-      default: return '#6B7280'; // Gray
+  const getStatusText = (isOverdue, daysUntilDue) => {
+    if (isOverdue) return `Overdue by ${Math.abs(daysUntilDue)} days`;
+    if (daysUntilDue === 0) return 'Due today';
+    if (daysUntilDue === 1) return 'Due tomorrow';
+    return `Due in ${daysUntilDue} days`;
+  };
+
+  const getFullName = (borrowedBook) => {
+    // Try to use first + last name, fallback to username
+    if (borrowedBook.userFirstName && borrowedBook.userLastName) {
+      return `${borrowedBook.userFirstName} ${borrowedBook.userLastName}`;
     }
+    return borrowedBook.username;
   };
 
   if (isLoading) {
@@ -361,29 +369,67 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Currently Borrowed Books Section */}
       <div className={styles.activitySection}>
-        <h3 className={styles.activityTitle}>Recent Activity</h3>
-        <div className={styles.activityList}>
-          {recentActivity.length === 0 ? (
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.activityTitle}>Currently Borrowed Books</h3>
+          <span className={styles.badge}>{borrowedBooks.length} Active</span>
+        </div>
+        <div className={styles.borrowedBooksList}>
+          {borrowedBooks.length === 0 ? (
             <div className={styles.noData}>
-              <Clock size={32} />
-              <p>No recent activity found</p>
+              <BookOpen size={32} />
+              <p>No books are currently borrowed</p>
             </div>
           ) : (
-            recentActivity.map((activity) => (
-              <div key={activity.id} className={styles.activityItem}>
-                <div
-                  className={styles.activityIcon}
-                  style={{ backgroundColor: `${getActivityColor(activity.type)}20`, color: getActivityColor(activity.type) }}
-                >
-                  {getActivityIcon(activity.type)}
+            borrowedBooks.map((item) => (
+              <div key={item.id} className={styles.borrowedBookCard}>
+                <div className={styles.bookInfo}>
+                  <div className={styles.bookHeader}>
+                    <h4 className={styles.bookTitle}>{item.bookTitle}</h4>
+                    <span
+                      className={styles.statusBadge}
+                      style={{
+                        backgroundColor: `${getStatusColor(item.isOverdue, item.daysUntilDue)}20`,
+                        color: getStatusColor(item.isOverdue, item.daysUntilDue)
+                      }}
+                    >
+                      {getStatusText(item.isOverdue, item.daysUntilDue)}
+                    </span>
+                  </div>
+                  <div className={styles.bookMeta}>
+                    <span className={styles.metaItem}>
+                      <Calendar size={14} />
+                      Borrowed: {item.borrowDate}
+                    </span>
+                    <span className={styles.metaItem}>
+                      <Clock size={14} />
+                      Due: {item.dueDate}
+                    </span>
+                  </div>
                 </div>
-                <div className={styles.activityContent}>
-                  <p className={styles.activityText}>
-                    <strong>{activity.user}</strong> - {activity.action}: "{activity.book}"
-                  </p>
-                  <span className={styles.activityTime}>{activity.time}</span>
+
+                <div className={styles.studentInfo}>
+                  <div className={styles.studentHeader}>
+                    <User size={16} />
+                    <strong>Borrowed by:</strong>
+                  </div>
+                  <div className={styles.studentDetails}>
+                    <p className={styles.studentName}>{getFullName(item)}</p>
+                    <p className={styles.studentContact}>
+                      <Mail size={12} />
+                      {item.userEmail}
+                    </p>
+                    {item.userPhone !== 'N/A' && (
+                      <p className={styles.studentContact}>
+                        <Phone size={12} />
+                        {item.userPhone}
+                      </p>
+                    )}
+                    <p className={styles.studentId}>
+                      Student ID: {item.userStudentId}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))

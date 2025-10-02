@@ -1,5 +1,6 @@
 package com.example.Library_Management.controller;
 
+import com.example.Library_Management.dto.BorrowingDTO;
 import com.example.Library_Management.entity.Borrowing;
 import com.example.Library_Management.entity.User;
 import com.example.Library_Management.entity.Book;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/borrowings")
@@ -29,31 +31,54 @@ public class BorrowingController {
     @Autowired
     private BookService bookService;
 
+    // Helper method: Convert Borrowing -> BorrowingDTO
+    private BorrowingDTO toDTO(Borrowing b) {
+        return new BorrowingDTO(
+                b.getId(),
+                b.getUser().getId(),
+                b.getUser().getUsername(),
+                b.getBook().getId(),
+                b.getBook().getTitle(),
+                b.getStatus().name(),
+                b.getBorrowDate(),
+                b.getDueDate(),
+                b.getReturnDate());
+    }
+
     // GET all borrowings
     @GetMapping
-    public ResponseEntity<List<Borrowing>> getAllBorrowings() {
-        List<Borrowing> borrowings = borrowingService.getAllBorrowings();
-        return ResponseEntity.ok(borrowings);
+    public ResponseEntity<List<BorrowingDTO>> getAllBorrowings() {
+        List<BorrowingDTO> dtoList = borrowingService.getAllBorrowings()
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtoList);
     }
 
     // GET borrowings by user ID
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Borrowing>> getUserBorrowings(@PathVariable Long userId) {
+    public ResponseEntity<List<BorrowingDTO>> getUserBorrowings(@PathVariable Long userId) {
         Optional<User> user = userService.getUserById(userId);
         if (user.isPresent()) {
-            List<Borrowing> borrowings = borrowingService.getUserBorrowings(user.get());
-            return ResponseEntity.ok(borrowings);
+            List<BorrowingDTO> dtoList = borrowingService.getUserBorrowings(user.get())
+                    .stream()
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtoList);
         }
         return ResponseEntity.notFound().build();
     }
 
     // GET active borrowings by user ID
     @GetMapping("/user/{userId}/active")
-    public ResponseEntity<List<Borrowing>> getUserActiveBorrowings(@PathVariable Long userId) {
+    public ResponseEntity<List<BorrowingDTO>> getUserActiveBorrowings(@PathVariable Long userId) {
         Optional<User> user = userService.getUserById(userId);
         if (user.isPresent()) {
-            List<Borrowing> borrowings = borrowingService.getUserActiveBorrowings(user.get());
-            return ResponseEntity.ok(borrowings);
+            List<BorrowingDTO> dtoList = borrowingService.getUserActiveBorrowings(user.get())
+                    .stream()
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtoList);
         }
         return ResponseEntity.notFound().build();
     }
@@ -63,13 +88,11 @@ public class BorrowingController {
     public ResponseEntity<Map<String, Boolean>> canUserBorrow(@PathVariable Long userId) {
         Optional<User> user = userService.getUserById(userId);
         Map<String, Boolean> response = new HashMap<>();
-
         if (user.isPresent()) {
             boolean canBorrow = borrowingService.canUserBorrow(user.get());
             response.put("canBorrow", canBorrow);
             return ResponseEntity.ok(response);
         }
-
         response.put("canBorrow", false);
         return ResponseEntity.ok(response);
     }
@@ -80,10 +103,9 @@ public class BorrowingController {
         try {
             Optional<User> user = userService.getUserById(userId);
             Optional<Book> book = bookService.getBookById(bookId);
-
             if (user.isPresent() && book.isPresent()) {
                 Borrowing borrowing = borrowingService.borrowBook(user.get(), book.get());
-                return ResponseEntity.ok(borrowing);
+                return ResponseEntity.ok(toDTO(borrowing));
             }
             return ResponseEntity.badRequest().body("User or book not found");
         } catch (Exception e) {
@@ -96,7 +118,7 @@ public class BorrowingController {
     public ResponseEntity<?> returnBook(@PathVariable Long borrowingId) {
         try {
             Borrowing borrowing = borrowingService.returnBook(borrowingId);
-            return ResponseEntity.ok(borrowing);
+            return ResponseEntity.ok(toDTO(borrowing));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -104,16 +126,19 @@ public class BorrowingController {
 
     // GET overdue borrowings
     @GetMapping("/overdue")
-    public ResponseEntity<List<Borrowing>> getOverdueBorrowings() {
-        List<Borrowing> borrowings = borrowingService.getOverdueBorrowings();
-        return ResponseEntity.ok(borrowings);
+    public ResponseEntity<List<BorrowingDTO>> getOverdueBorrowings() {
+        List<BorrowingDTO> dtoList = borrowingService.getOverdueBorrowings()
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtoList);
     }
 
     // GET borrowing by ID
     @GetMapping("/{id}")
-    public ResponseEntity<Borrowing> getBorrowingById(@PathVariable Long id) {
+    public ResponseEntity<BorrowingDTO> getBorrowingById(@PathVariable Long id) {
         Optional<Borrowing> borrowing = borrowingService.getBorrowingById(id);
-        return borrowing.map(ResponseEntity::ok)
+        return borrowing.map(b -> ResponseEntity.ok(toDTO(b)))
                 .orElse(ResponseEntity.notFound().build());
     }
 }
